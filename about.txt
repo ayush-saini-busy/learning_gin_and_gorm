@@ -1,0 +1,17 @@
+Gin is a high performance Web framework written in Go that is 40 times faster than Martini
+1) It is very fast, since it utilises radix tree based routing with a small memory footprint
+2) Middleware support 
+3) Cache free
+4) Json validation
+5) Route Grouping
+6) Error management
+
+* The Router is an important concept in Gin that is responsible for handling incoming HTTP requests 
+and routing them to the appropriate handlers
+* There are two methods 
+router :=gin.Default() --> provides logging and recovery middleware 
+router :=gin.New() --> Without default middleware
+
+* Gin supports the following HTTP methods: GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS
+
+* Context (gin.Context) is responsible for carrying request data, validating JSON and rendering responses
