@@ -21,17 +21,17 @@ type Post struct {
 	ID        uint   `gorm:"primaryKey"`
 	Title     string `gorm:"not null"`
 	Content   string `gorm:"type:text"`
-	UserID    uint   `gorm:"not null"`
-	User      User   `gorm:"foreignKey:UserID"`
-	Tags      []Tag  `gorm:"many2many:post_tags;"`
+	UserID    uint   `gorm:"not null;index"`
+	User      User
+	Tags      []Tag `gorm:"many2many:post_tags;"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
 
 type Tag struct {
-	ID   uint   `gorm:"primaryKey"`
-	Name string `gorm:"unique;not null"`
-	Post []Post `gorm:"many2many:post_tags"`
+	ID    uint   `gorm:"primaryKey"`
+	Name  string `gorm:"unique;not null"`
+	Posts []Post `gorm:"many2many:post_tags;"`
 }
 
 // Connecting to the database
@@ -55,7 +55,8 @@ func CreateUserWithPost(db *gorm.DB, user *User) error {
 // Get user with posts
 func GetUserWithPost(db *gorm.DB, userId uint) (*User, error) {
 	var user User
-	if err := db.Preload("Posts").Error; err != nil {
+	if err := db.Preload("Posts").
+		First(&user, userId).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
@@ -77,7 +78,14 @@ func CreatePostWithTag(db *gorm.DB, post *Post, tagNames []string) error {
 
 func GetPostWithTag(db *gorm.DB, tagName string) ([]Post, error) {
 	var posts []Post
-	err := db.Joins("JOIN post_tags ON post_tags.post_id=post.id").Joins("JOIN tags ON post_tags.post_id = tags.id").Where("tags.name =?", tagName).Preload("User").Preload("Tag").Find(&posts).Error
+
+	err := db.Joins("JOIN post_tags ON post_tags.post_id = posts.id").
+		Joins("JOIN tags ON tags.id = post_tags.tag_id").
+		Where("tags.name = ?", tagName).
+		Preload("User").
+		Preload("Tags").
+		Find(&posts).Error
+
 	if err != nil {
 		return nil, err
 	}
@@ -98,13 +106,14 @@ func AddTagToPost(db *gorm.DB, postID uint, tagNames []string) error {
 		}
 		tags = append(tags, tag)
 	}
-	return db.Model(&post).Association("Tag").Append(&tags)
+
+	return db.Model(&post).Association("Tags").Append(&tags)
 }
 
 func GetPostWithUserAndTags(db *gorm.DB, postID uint) (*Post, error) {
 	var post Post
 	if err := db.Preload("User").
-		Preload("Tag").
+		Preload("Tags").
 		First(&post, postID).Error; err != nil {
 		return nil, err
 	}
